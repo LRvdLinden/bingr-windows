@@ -1,0 +1,24 @@
+Geïnstalleerd: Bingr.exe 1.0.1+142 (Bingr); snelkoppelingen in Start: 1
+Apps en onderdelen: Bingr 1.0.1+142, uitgever PixelForges
+Offline: startpagina bleef staan; bingr.online weer vrijgegeven
+::notice title=Rooktest::Bingr draait en de webspeler (https://bingr.online/web/) is geladen (na de offline-melding vanzelf opnieuw geprobeerd)
+::notice title=Rooktest::volledig scherm (F11) aan en uit werkt
+::notice title=Rooktest::mediatoets afspelen/pauze komt bij de speler aan
+::notice title=Rooktest::verbinding weg tijdens gebruik: offline-melding, daarna vanzelf terug naar de webspeler
+Processen Bingr: 1
+  log: shortcut MediaPlayPause ok
+  log: shortcut MediaStop ok
+  log: shortcut MediaTrackNext ok
+  log: shortcut MediaTrackPrevious ok
+  log: loaded http://tauri.localhost/
+  log: loaded https://bingr.online/web/
+  log: fullscreen true
+  log: fullscreen false
+  log: media playpause
+  log: loaded https://bingr.online/web/
+  log: navigation-failed 0
+  log: loaded https://bingr.online/web/
+  log: navigation-failed 9
+  log: loaded http://tauri.localhost/index.html
+  log: loaded https://bingr.online/web/
+::notice title=Rooktest::stil installeren, starten, tweede start en verwijderen gelukt

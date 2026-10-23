@@ -1,0 +1,26 @@
+    Updating crates.io index
+     Locking 35 packages to highest compatible versions
+ Downloading crates ...
+  Downloaded smallvec v1.16.4
+   Compiling smallvec v1.16.4
+   Compiling icu_normalizer v2.4.0
+   Compiling idna_adapter v1.2.2
+   Compiling idna v1.1.0
+   Compiling url v2.5.8
+   Compiling navtest v0.0.0 (D:\a\bingr-windows\bingr-windows\tools\navtest)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 15.10s
+     Running unittests src\lib.rs (tools\navtest\target\debug\deps\navtest-d11c482ce6b204c2.exe)
+
+running 3 tests
+test nav::tests::externe_links ... ok
+test nav::tests::in_de_app ... ok
+test nav::tests::naar_de_browser ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests navtest
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

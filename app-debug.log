@@ -1,0 +1,15 @@
+shortcut MediaPlayPause ok
+shortcut MediaStop ok
+shortcut MediaTrackNext ok
+shortcut MediaTrackPrevious ok
+loaded http://tauri.localhost/
+loaded https://bingr.online/web/
+fullscreen true
+fullscreen false
+media playpause
+loaded https://bingr.online/web/
+navigation-failed 0
+loaded https://bingr.online/web/
+navigation-failed 9
+loaded http://tauri.localhost/index.html
+loaded https://bingr.online/web/
