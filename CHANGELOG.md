@@ -11,7 +11,7 @@ _23 oktober 2026_
 
 **Nieuw**
 
-- Nieuw: Bingr voor Windows. Installeer Bingr op je Windows 10- of 11-pc en kijk je zenders, films en series in een eigen venster, met volledig scherm, mediatoetsen en je Bingr-account (inloggen met e-mail of koppelcode)
+- Bingr voor Windows: Installeer Bingr op je Windows 10- of 11-pc en kijk je zenders, films en series in een eigen venster, met volledig scherm, mediatoetsen en je Bingr-account (inloggen met e-mail of koppelcode)
 
 ### Server
 
