@@ -103,6 +103,10 @@ try {
 # 5. verbinding valt weg terwijl de webspeler open is: herladen (F5) mislukt -> offline-melding, daarna vanzelf terug
 if ($offlineTested -and $loaded) {
   try {
+    # de webspeler houdt een verbinding open (HTTP/2): naast het hosts-bestand ook de adressen van bingr.online in de
+    # firewall blokkeren (Windows controleert bestaande verbindingen opnieuw na een nieuwe regel)
+    $ips = @(Resolve-DnsName bingr.online -ErrorAction SilentlyContinue | Where-Object { $_.IPAddress } | ForEach-Object { $_.IPAddress })
+    if ($ips) { New-NetFirewallRule -DisplayName 'Bingr rooktest offline' -Direction Outbound -Action Block -RemoteAddress $ips | Out-Null }
     Add-Content -Path $hosts -Value "`r`n0.0.0.0 bingr.online`r`n0.0.0.0 www.bingr.online"
     ipconfig /flushdns | Out-Null
     $before = @(Select-String -Path $log -SimpleMatch 'loaded https://bingr.online/web/').Count
@@ -110,6 +114,8 @@ if ($offlineTested -and $loaded) {
     $ws.SendKeys('{F5}')
     $failed = Wait-Log 'navigation-failed' 20
     $back = $failed -and (Wait-Log 'loaded http://tauri.localhost/index.html' 10)
+    if ($back) { Start-Sleep -Seconds 2; Shot 'screenshot-offline-later.png' }
+    Remove-NetFirewallRule -DisplayName 'Bingr rooktest offline' -ErrorAction SilentlyContinue
     Set-Content -Path $hosts -Value $hostsBak -NoNewline
     ipconfig /flushdns | Out-Null
     if ($back) {
@@ -119,7 +125,7 @@ if ($offlineTested -and $loaded) {
       else { Write-Host '::warning title=Rooktest::na de offline-melding niet vanzelf terug naar de webspeler' }
     } else { Write-Host "::warning title=Rooktest::herladen zonder verbinding gaf geen offline-melding (navigation-failed: $failed)" }
   } catch { Write-Host "::warning title=Rooktest::offline tijdens gebruik niet te testen: $($_.Exception.Message)" }
-  finally { Set-Content -Path $hosts -Value $hostsBak -NoNewline }
+  finally { Remove-NetFirewallRule -DisplayName 'Bingr rooktest offline' -ErrorAction SilentlyContinue; Set-Content -Path $hosts -Value $hostsBak -NoNewline }
 }
 
 # tweede start: mag geen tweede proces blijven (single instance), het bestaande venster komt naar voren
