@@ -4,6 +4,21 @@ Alle versies van Bingr voor Windows (installer voor Windows 10 en 11). De app to
 
 Per build, ingedeeld per apparaatsoort: **Nieuw**, **Verbeterd** en **Opgelost**.
 
+## Versie 1.0.1 · Build 145
+_24 oktober 2026_
+
+### Alle apps en de website
+
+**Nieuw**
+
+- Na het kiezen van een profiel vraagt Bingr of je je servers nu wilt bijwerken (Nu bijwerken of Later); je bewaarde lijst staat meteen klaar
+- Nieuwe instelling Servers laden bij openen: Vragen, Altijd of Nooit, alleen handmatig (per apparaat)
+
+**Verbeterd**
+
+- Geen automatisch verversen op tijd meer: de vernieuwtermijn (elke dag, week enz.) is vervallen; je kiest zelf wanneer, of vernieuwt handmatig
+- Bijwerken gaat één server tegelijk op de achtergrond, de open server eerst, en nooit tijdens het afspelen
+
 ## Versie 1.0.1 · Build 142
 _23 oktober 2026_
 
