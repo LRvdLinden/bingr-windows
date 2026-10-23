@@ -1,0 +1,9 @@
+node_modules/
+src-tauri/target/
+tools/navtest/target/
+tools/navtest/Cargo.lock
+src-tauri/gen/
+dist/
+*.pfx
+*.p12
+signing/

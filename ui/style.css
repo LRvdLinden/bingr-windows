@@ -1,0 +1,16 @@
+:root { --bg: #000; --fg: #fff; --muted: #a3a3a3; --red: #e50914; }
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.5 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  display: flex; align-items: center; justify-content: center; user-select: none; -webkit-user-select: none; }
+.box { width: min(460px, 100% - 32px); text-align: center; }
+.logo { width: 180px; height: auto; margin: 0 auto 28px; display: block; }
+.spin { width: 28px; height: 28px; margin: 0 auto; border: 3px solid #333; border-top-color: var(--red); border-radius: 50%;
+  animation: r .9s linear infinite; }
+@keyframes r { to { transform: rotate(360deg); } }
+.off h1 { font-size: 20px; margin: 0 0 8px; font-weight: 600; }
+.off p { color: var(--muted); margin: 0 0 22px; }
+button { font: inherit; font-weight: 600; color: #fff; background: var(--red); border: 0; border-radius: 6px; padding: 10px 22px; cursor: pointer; }
+button:hover { filter: brightness(1.1); }
+button:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .spin { animation-duration: 3s; } }

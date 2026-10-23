@@ -1,0 +1,29 @@
+[package]
+name = "bingr"
+version = "1.0.1"
+description = "Bingr voor Windows"
+authors = ["PixelForges"]
+edition = "2021"
+publish = false
+
+[build-dependencies]
+tauri-build = { version = "2.7", features = [] }
+
+[dependencies]
+tauri = { version = "2.12", features = [] }
+tauri-plugin-global-shortcut = "2.4"
+tauri-plugin-opener = "2.7"
+tauri-plugin-single-instance = "2.5"
+tauri-plugin-window-state = "2.5"
+url = "2"
+
+# zelfde versies als wry gebruikt (WebView2-events voor volledig scherm en offline)
+[target.'cfg(windows)'.dependencies]
+webview2-com = "0.39"
+windows-core = "0.62"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

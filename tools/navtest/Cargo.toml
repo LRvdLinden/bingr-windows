@@ -1,0 +1,14 @@
+# Test van src-tauri/src/nav.rs zonder Tauri/WebView2 (snel, ook op Linux): cargo test --manifest-path tools/navtest/Cargo.toml
+[package]
+name = "navtest"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+url = "2"
+
+[workspace]

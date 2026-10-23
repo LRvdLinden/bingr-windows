@@ -1,0 +1,43 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Bingr",
+  "version": "1.0.1+140",
+  "identifier": "nl.lrvdlinden.bingr.windows",
+  "build": {
+    "frontendDist": "../ui"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "windows": [],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src https://bingr.online",
+      "capabilities": []
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "publisher": "PixelForges",
+    "copyright": "© 2026 PixelForges",
+    "homepage": "https://bingr.online",
+    "category": "Video",
+    "shortDescription": "Bingr: je eigen zenders, films en series",
+    "longDescription": "Bingr is een IPTV-speler voor je eigen servers (M3U, Xtream, MAC): Live TV, films en series, met je Bingr-account, profielen, Mijn lijst en voortgang op al je apparaten.",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.png",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "webviewInstallMode": { "type": "embedBootstrapper" },
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": ["Dutch", "English"],
+        "displayLanguageSelector": false,
+        "installerIcon": "icons/icon.ico"
+      }
+    }
+  }
+}

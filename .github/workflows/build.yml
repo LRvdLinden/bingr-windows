@@ -1,0 +1,227 @@
+name: Build
+
+# Bouwt Bingr voor Windows (Tauri v2, NSIS-installer .exe) op windows-latest, controleert en test de installer (stil
+# installeren, starten, verwijderen) en levert hem VERSLEUTELD aan bij de privé repo LRvdLinden/bingr-inbox
+# (tools/seal_build.sh van bingr-beheer, platform windows). De workflow Builds van bingr-beheer zet hem in de afgesloten
+# map builds/ op de server; downloaden alleen via het beheer (tab Downloads).
+# Buildpakketten komen NOOIT op GitHub: geen artefact, geen release, niet in een repo. De branch ci-logs bevat alleen
+# logboeken en een schermafbeelding van het inlogscherm.
+# Ondertekenen gebeurt alleen als de secrets er zijn (zie README.md, "Ondertekenen"); anders onondertekend met een notice.
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['docs/**', '**/*.md']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5 (v5.1.0)
+
+      - name: Logmap
+        run: New-Item -ItemType Directory -Force -Path "$env:RUNNER_TEMP\logs" | Out-Null
+
+      - name: Versie en build controleren
+        run: |
+          python tools/set_version.py --check
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          $p = Get-Content version.properties | ConvertFrom-StringData
+          "BINGR_VERSION=$($p.BINGR_VERSION)" >> $env:GITHUB_ENV
+          "BINGR_BUILD=$($p.BINGR_BUILD)" >> $env:GITHUB_ENV
+          Write-Host "::notice title=Versie::Bingr voor Windows $($p.BINGR_VERSION) (build $($p.BINGR_BUILD))"
+
+      - name: Scripts controleren (syntaxis)
+        run: |
+          node --check src-tauri/src/inject.js
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          node --check ui/app.js
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          foreach ($f in 'tools/sign.ps1', 'tools/smoke.ps1') {
+            $err = $null; [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $f), [ref]$null, [ref]$err) | Out-Null
+            if ($err) { $err | ForEach-Object { Write-Host "::error file=$f::$($_.Message)" }; exit 1 }
+          }
+
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2 (v2.9.3)
+        with:
+          workspaces: |
+            src-tauri
+            tools/navtest
+
+      - name: Unit-tests (navigatie)
+        run: |
+          cargo test --manifest-path tools/navtest/Cargo.toml 2>&1 | Tee-Object "$env:RUNNER_TEMP\logs\navtest.log"
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          Write-Host "::notice title=Unit-tests::$((Select-String -Path "$env:RUNNER_TEMP\logs\navtest.log" -Pattern 'test result:' | Select-Object -First 1).Line.Trim())"
+
+      - name: npm-pakketten (Tauri CLI)
+        run: |
+          npm ci --no-audit --no-fund
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      # Ondertekenen alleen met secrets. Voorkeur: Azure Artifact Signing (voorheen Trusted Signing); anders een .pfx.
+      # Niets van de secrets komt in het log of op de opdrachtregel.
+      - name: Ondertekenen klaarzetten
+        env:
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AS_ENDPOINT: ${{ secrets.ARTIFACT_SIGNING_ENDPOINT }}
+          AS_ACCOUNT: ${{ secrets.ARTIFACT_SIGNING_ACCOUNT }}
+          AS_PROFILE: ${{ secrets.ARTIFACT_SIGNING_PROFILE }}
+          PFX_B64: ${{ secrets.WINDOWS_CERT_PFX_BASE64 }}
+          PFX_PW: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+          DLIB_VERSION: '1.0.128'
+        run: |
+          $mode = ''
+          if ($env:AZURE_TENANT_ID -and $env:AZURE_CLIENT_ID -and $env:AZURE_CLIENT_SECRET -and $env:AS_ENDPOINT -and $env:AS_ACCOUNT -and $env:AS_PROFILE) {
+            $mode = 'azure'
+            $pkg = "$env:RUNNER_TEMP\artifactsigning"
+            New-Item -ItemType Directory -Force -Path $pkg | Out-Null
+            $url = "https://api.nuget.org/v3-flatcontainer/microsoft.artifactsigning.client/$env:DLIB_VERSION/microsoft.artifactsigning.client.$env:DLIB_VERSION.nupkg"
+            Invoke-WebRequest -Uri $url -OutFile "$pkg\client.zip"
+            Expand-Archive "$pkg\client.zip" -DestinationPath "$pkg\x" -Force
+            $dlib = Get-ChildItem "$pkg\x" -Recurse -Filter Azure.CodeSigning.Dlib.dll | Where-Object { $_.FullName -match '\\x64\\' } | Select-Object -First 1
+            if (-not $dlib) { Write-Host "::error::Azure.CodeSigning.Dlib.dll (x64) niet gevonden in Microsoft.ArtifactSigning.Client $env:DLIB_VERSION"; exit 1 }
+            # alleen EnvironmentCredential (AZURE_TENANT_ID/CLIENT_ID/CLIENT_SECRET)
+            @{ Endpoint = $env:AS_ENDPOINT; CodeSigningAccountName = $env:AS_ACCOUNT; CertificateProfileName = $env:AS_PROFILE
+               ExcludeCredentials = @('ManagedIdentityCredential', 'WorkloadIdentityCredential', 'SharedTokenCacheCredential',
+                 'VisualStudioCredential', 'VisualStudioCodeCredential', 'AzureCliCredential', 'AzurePowerShellCredential',
+                 'AzureDeveloperCliCredential', 'InteractiveBrowserCredential') } | ConvertTo-Json | Set-Content "$env:RUNNER_TEMP\as-metadata.json" -Encoding utf8
+            "BINGR_SIGN_DLIB=$($dlib.FullName)" >> $env:GITHUB_ENV
+            "BINGR_SIGN_METADATA=$env:RUNNER_TEMP\as-metadata.json" >> $env:GITHUB_ENV
+            Write-Host "::notice title=Ondertekenen::Azure Artifact Signing (profiel uit de secrets)"
+          } elseif ($env:PFX_B64) {
+            $mode = 'pfx'
+            $f = "$env:RUNNER_TEMP\cert.pfx"
+            [IO.File]::WriteAllBytes($f, [Convert]::FromBase64String(($env:PFX_B64 -replace '\s', '')))
+            $pw = ConvertTo-SecureString -String "$env:PFX_PW" -AsPlainText -Force
+            $c = Import-PfxCertificate -FilePath $f -CertStoreLocation Cert:\CurrentUser\My -Password $pw
+            Remove-Item $f -Force
+            $c = $c | Where-Object { $_.HasPrivateKey } | Select-Object -First 1
+            if (-not $c) { Write-Host '::error::WINDOWS_CERT_PFX_BASE64 bevat geen certificaat met privésleutel'; exit 1 }
+            if ($c.NotAfter -lt (Get-Date)) { Write-Host "::error::Het certificaat is verlopen ($($c.NotAfter.ToString('yyyy-MM-dd')))"; exit 1 }
+            "BINGR_SIGN_THUMBPRINT=$($c.Thumbprint)" >> $env:GITHUB_ENV
+            Write-Host "::notice title=Ondertekenen::certificaat '$($c.GetNameInfo('SimpleName', $false))', geldig tot $($c.NotAfter.ToString('yyyy-MM-dd'))"
+          } else {
+            Write-Host '::notice title=Ondertekenen::Geen ondertekensecrets: de installer is niet ondertekend (Windows SmartScreen toont een waarschuwing). Zie README.md, "Ondertekenen".'
+          }
+          if ($mode) {
+            "BINGR_SIGN_MODE=$mode" >> $env:GITHUB_ENV
+            $sign = (Resolve-Path tools/sign.ps1).Path
+            @{ bundle = @{ windows = @{ signCommand = @{ cmd = 'pwsh'; args = @('-NoProfile', '-NonInteractive', '-File', $sign, '%1') } } } } |
+              ConvertTo-Json -Depth 6 | Set-Content "$env:RUNNER_TEMP\tauri.sign.json" -Encoding utf8
+            "BINGR_TAURI_SIGN_CONFIG=$env:RUNNER_TEMP\tauri.sign.json" >> $env:GITHUB_ENV
+          }
+
+      - name: Installer bouwen (Tauri, NSIS)
+        env:
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+        run: |
+          $a = @('tauri', 'build', '--ci', '--bundles', 'nsis')
+          if ($env:BINGR_TAURI_SIGN_CONFIG) { $a += @('--config', $env:BINGR_TAURI_SIGN_CONFIG) }
+          npx @a 2>&1 | Tee-Object "$env:RUNNER_TEMP\logs\build.log"
+          if ($LASTEXITCODE -ne 0) {
+            Select-String -Path "$env:RUNNER_TEMP\logs\build.log" -Pattern '^error|error\[|Error ' | Select-Object -First 30 | ForEach-Object { Write-Host "::error::$($_.Line.Substring(0, [Math]::Min(400, $_.Line.Length)))" }
+            exit 1
+          }
+          $exe = Get-ChildItem src-tauri/target/release/bundle/nsis -Filter *-setup.exe | Select-Object -First 1
+          if (-not $exe) { Write-Host '::error::geen NSIS-installer gevonden'; exit 1 }
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          $out = "dist/Bingr-$env:BINGR_VERSION-build$env:BINGR_BUILD-setup.exe"
+          Copy-Item $exe.FullName $out
+          "INSTALLER=$((Resolve-Path $out).Path)" >> $env:GITHUB_ENV
+
+      - name: Installer controleren
+        run: |
+          $f = Get-Item $env:INSTALLER
+          $app = Get-ChildItem src-tauri/target/release -Filter *.exe | Where-Object { $_.Name -match '^(bingr|Bingr)\.exe$' } | Select-Object -First 1
+          $err = @()
+          if ($f.Length -lt 1MB -or $f.Length -gt 99MB) { $err += "installer is $($f.Length) bytes (verwacht 1-99 MB; de inbox weigert boven 100 MB)" }
+          $want = "$env:BINGR_VERSION.$env:BINGR_BUILD"
+          foreach ($x in @($f, $app)) {
+            if (-not $x) { $err += 'Bingr.exe niet gevonden in target/release'; continue }
+            $v = $x.VersionInfo
+            Write-Host "$($x.Name): FileVersion=$($v.FileVersion) ProductVersion=$($v.ProductVersion) ProductName=$($v.ProductName) CompanyName=$($v.CompanyName)"
+            if ("$($v.FileMajorPart).$($v.FileMinorPart).$($v.FileBuildPart).$($v.FilePrivatePart)" -ne $want) { $err += "$($x.Name): bestandsversie $($v.FileMajorPart).$($v.FileMinorPart).$($v.FileBuildPart).$($v.FilePrivatePart), verwacht $want" }
+            if ($v.ProductName -ne 'Bingr') { $err += "$($x.Name): productnaam '$($v.ProductName)', verwacht 'Bingr'" }
+          }
+          # handtekening: met secrets verplicht geldig, zonder secrets onondertekend (notice)
+          foreach ($x in @($f, $app)) {
+            if (-not $x) { continue }
+            $s = Get-AuthenticodeSignature $x.FullName
+            if ($env:BINGR_SIGN_MODE) {
+              if ($s.Status -ne 'Valid' -and -not ($env:BINGR_SIGN_MODE -eq 'pfx' -and $s.SignerCertificate)) { $err += "$($x.Name): handtekening $($s.Status)" }
+              else { Write-Host "::notice title=Ondertekend::$($x.Name): $($s.Status), $($s.SignerCertificate.GetNameInfo('SimpleName', $false)), tijdstempel: $([bool]$s.TimeStamperCertificate)" }
+            } elseif ($s.Status -ne 'NotSigned') { Write-Host "::warning::$($x.Name): handtekening $($s.Status) zonder ondertekensecrets" }
+          }
+          if ($err) { $err | ForEach-Object { Write-Host "::error title=Controle::$_" }; exit 1 }
+          $sha = (Get-FileHash $f.FullName -Algorithm SHA256).Hash.ToLower()
+          Write-Host "::notice title=Installer::$($f.Name): $([Math]::Round($f.Length / 1MB, 1)) MB, versie $want, SHA-256 $sha"
+
+      - name: Rooktest (installeren, starten, verwijderen)
+        run: |
+          pwsh -NoProfile -File tools/smoke.ps1 -Installer $env:INSTALLER -OutDir "$env:RUNNER_TEMP\logs" 2>&1 | Tee-Object "$env:RUNNER_TEMP\logs\smoke.log"
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      # Pakketten staan nooit (onversleuteld) op GitHub. Versleuteld naar de PRIVÉ repo LRvdLinden/bingr-inbox
+      # (tools/seal_build.sh van bingr-beheer, anoniem gekloond; branch inbox-windows). Nodig: secret BINGR_INBOX_TOKEN
+      # (fine-grained, alleen Contents: Read and write op bingr-inbox). Het token gaat nooit in een URL.
+      - name: Installer versleuteld aanleveren voor beheer.bingr.online
+        if: success() && github.event_name != 'pull_request'
+        shell: bash
+        env:
+          TOKEN: ${{ secrets.BINGR_INBOX_TOKEN }}
+          BINGR_INBOX_REPO: LRvdLinden/bingr-inbox
+        run: |
+          set -euo pipefail
+          TOKEN=$(printf '%s' "${TOKEN:-}" | tr -d '[:space:]')
+          # bewust geen terugval op een ander token: zonder BINGR_INBOX_TOKEN wordt er niets aangeleverd
+          if [ -z "$TOKEN" ]; then
+            echo "::notice::Secret BINGR_INBOX_TOKEN ontbreekt: installer niet aangeleverd (zie README.md)."
+            exit 0
+          fi
+          # seal_build.sh roept python3 aan; op de Windows-runner heet die python
+          mkdir -p "$HOME/shim"; printf '#!/bin/sh\nexec python "$@"\n' > "$HOME/shim/python3"; chmod +x "$HOME/shim/python3"; export PATH="$HOME/shim:$PATH"
+          V="$BINGR_VERSION"; B="$BINGR_BUILD"
+          pkg="$RUNNER_TEMP/pkg"; mkdir -p "$pkg"
+          cp "$(cygpath -u "$INSTALLER")" "$pkg/Bingr-$V-build$B-setup.exe"
+          # notities uit CHANGELOG.md (sectie van dit buildnummer; gemaakt met tools/make_changelog.py --windows)
+          awk -v b="Build $B" '/^## /{f=($0 ~ (b "$"))?1:0; next} f && !/^_.*_$/' CHANGELOG.md > "$pkg/notes.md" 2>/dev/null || true
+          [ -s "$pkg/notes.md" ] || echo "Bingr $V, build $B." > "$pkg/notes.md"
+          GIT_TERMINAL_PROMPT=0 git clone -q --depth 1 https://github.com/LRvdLinden/bingr-beheer.git "$RUNNER_TEMP/beheer" 2>/dev/null \
+            || { echo "::error::bingr-beheer niet op te halen."; exit 1; }
+          TOKEN="$TOKEN" "$RUNNER_TEMP/beheer/tools/seal_build.sh" windows "$pkg/Bingr-$V-build$B-setup.exe" "$V" "$B" "$pkg/notes.md"
+          rm -rf "$pkg"
+
+      - name: Installer opruimen
+        if: always()
+        run: Remove-Item -Recurse -Force dist, src-tauri/target/release/bundle -ErrorAction SilentlyContinue
+
+      # niet bij pull requests (die mogen de branch ci-logs niet overschrijven); alleen logboeken en de schermafbeelding
+      - name: Log op branch ci-logs zetten
+        if: always() && github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          set +e
+          L="$RUNNER_TEMP/logs"; mkdir -p "$L"
+          echo "${{ job.status }} $(git rev-parse --short HEAD) build ${BINGR_BUILD:-?}" > "$L/status.txt"
+          cp "$L/status.txt" "$L/latest.txt"
+          cd "$L" && git init -q -b ci-logs && git add -A
+          git -c user.name=github-actions -c user.email=actions@github.com commit -qm "CI-log $(cat status.txt)"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" ci-logs
