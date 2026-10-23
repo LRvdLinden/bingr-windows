@@ -109,7 +109,6 @@ if ($offlineTested -and $loaded) {
     if ($ips) { New-NetFirewallRule -DisplayName 'Bingr rooktest offline' -Direction Outbound -Action Block -RemoteAddress $ips | Out-Null }
     Add-Content -Path $hosts -Value "`r`n0.0.0.0 bingr.online`r`n0.0.0.0 www.bingr.online"
     ipconfig /flushdns | Out-Null
-    $before = @(Select-String -Path $log -SimpleMatch 'loaded https://bingr.online/web/').Count
     [void]$ws.AppActivate($app.Id); Start-Sleep -Seconds 1
     $ws.SendKeys('{F5}')
     $failed = Wait-Log 'navigation-failed' 20
@@ -120,7 +119,13 @@ if ($offlineTested -and $loaded) {
     ipconfig /flushdns | Out-Null
     if ($back) {
       $again = $false
-      for ($i = 0; $i -lt 90 -and -not $again; $i++) { Start-Sleep -Seconds 1; $again = @(Select-String -Path $log -SimpleMatch 'loaded https://bingr.online/web/').Count -gt $before }
+      # pas een webspeler-load NA de offline-melding telt
+      for ($i = 0; $i -lt 90 -and -not $again; $i++) {
+        Start-Sleep -Seconds 1
+        $lines = @(Get-Content $log)
+        $off = [Array]::LastIndexOf($lines, 'loaded http://tauri.localhost/index.html')
+        $again = $off -ge 0 -and @($lines[($off + 1)..($lines.Count)] | Where-Object { $_ -eq 'loaded https://bingr.online/web/' }).Count -gt 0
+      }
       if ($again) { Write-Host '::notice title=Rooktest::verbinding weg tijdens gebruik: offline-melding, daarna vanzelf terug naar de webspeler' }
       else { Write-Host '::warning title=Rooktest::na de offline-melding niet vanzelf terug naar de webspeler' }
     } else { Write-Host "::warning title=Rooktest::herladen zonder verbinding gaf geen offline-melding (navigation-failed: $failed)" }
