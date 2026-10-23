@@ -4,6 +4,45 @@ Alle versies van Bingr voor Windows (installer voor Windows 10 en 11). De app to
 
 Per build, ingedeeld per apparaatsoort: **Nieuw**, **Verbeterd** en **Opgelost**.
 
+## Versie 1.0.1 · Build 142
+_23 oktober 2026_
+
+### Alle apps en de website
+
+**Verbeterd**
+
+- Nieuw op Bingr staat op de plek van Nieuw toegevoegd, met Film of Serie op elke tegel
+- Verder kijken toont de cover van de film of serie
+
+**Opgelost**
+
+- Titels die je na zoeken aan Mijn lijst toevoegt (ook van een andere server of een aanbeveling) staan er meteen in, ook op je andere apparaten
+
+### Alle apps, de website en de server
+
+**Verbeterd**
+
+- Inloggen is beter beschermd tegen raden, met een duidelijke melding bij te veel pogingen
+- Een nieuw wachtwoord moet minstens 8 tekens hebben
+
+### Windows en Website
+
+**Verbeterd**
+
+- De webspeler is strenger beveiligd: alle scripts komen van Bingr zelf
+
+### Website en Server
+
+**Verbeterd**
+
+- Een supportticket koppel je aan je account en is alleen voor jou zichtbaar
+
+### Server
+
+**Verbeterd**
+
+- De webproxy werkt alleen nog voor je eigen servers, met limieten per account
+
 ## Versie 1.0.1 · Build 140
 _23 oktober 2026_
 
