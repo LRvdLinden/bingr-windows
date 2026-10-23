@@ -1,6 +1,7 @@
 # Rooktest van de installer op de Windows-runner (workflow Build): stil installeren (per gebruiker), Bingr starten met
-# een debuglogboek (alleen geladen adressen), kijken of het venster blijft draaien en de webspeler van bingr.online laadt,
-# een schermafbeelding maken (inlogscherm, zonder account), afsluiten en stil verwijderen.
+# een debuglogboek (alleen geladen adressen en gebeurtenissen), eerst met bingr.online geblokkeerd (offline-melding),
+# dan vrijgegeven (de app moet vanzelf de webspeler laden), F11 (volledig scherm) en de mediatoets afspelen/pauze,
+# schermafbeeldingen (inlogscherm, zonder account), tweede start (één exemplaar), afsluiten en stil verwijderen.
 # Harde fouten (exit 1): installeren, starten, crashen of verwijderen mislukt. Laadt bingr.online niet (netwerk van de
 # runner), dan alleen een waarschuwing.
 param(
@@ -31,30 +32,95 @@ $reg = Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall'
 if ($reg) { Write-Host "Apps en onderdelen: $($reg.DisplayName) $($reg.DisplayVersion), uitgever $($reg.Publisher)" }
 else { Write-Host '::warning title=Rooktest::Bingr staat niet in Apps en onderdelen (HKCU Uninstall)' }
 
-# 2. starten met debuglogboek
+function Wait-Log($pattern, $seconds) {
+  for ($i = 0; $i -lt $seconds; $i++) {
+    if ($app.HasExited) { Fail "Bingr stopte (exitcode $($app.ExitCode))" }
+    if ((Test-Path $log) -and (Select-String -Path $log -SimpleMatch $pattern -Quiet)) { return $true }
+    Start-Sleep -Seconds 1
+  }
+  return $false
+}
+function Shot($name) {
+  try {
+    Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+    $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+    $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+    $g = [System.Drawing.Graphics]::FromImage($bmp)
+    $g.CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
+    $bmp.Save((Join-Path $OutDir $name), [System.Drawing.Imaging.ImageFormat]::Png)
+    $g.Dispose(); $bmp.Dispose()
+  } catch { Write-Host "Geen schermafbeelding: $($_.Exception.Message)" }
+}
+
+# 2. offline: bingr.online tijdelijk onbereikbaar (hosts-bestand van de runner) -> offline-melding, daarna weer online
+$hosts = "$env:SystemRoot\System32\drivers\etc\hosts"
+$hostsBak = Get-Content $hosts -Raw
+$offlineTested = $false
+try {
+  Add-Content -Path $hosts -Value "`r`n0.0.0.0 bingr.online`r`n0.0.0.0 www.bingr.online" -ErrorAction Stop
+  ipconfig /flushdns | Out-Null
+  $offlineTested = $true
+} catch { Write-Host "::warning title=Rooktest::hosts-bestand niet aan te passen; offline-test overgeslagen" }
+
 $env:BINGR_DEBUG_LOG = $log
 $app = Start-Process -FilePath $exe.FullName -PassThru
-$loaded = $false
-for ($i = 0; $i -lt 60; $i++) {
-  Start-Sleep -Seconds 1
-  if ($app.HasExited) { Fail "Bingr stopte na $i s (exitcode $($app.ExitCode))" }
-  if ((Test-Path $log) -and (Select-String -Path $log -SimpleMatch 'loaded https://bingr.online/web/' -Quiet)) { $loaded = $true; break }
+if ($offlineTested) {
+  [void](Wait-Log 'loaded http://tauri.localhost/' 30)
+  Start-Sleep -Seconds 12   # de startpagina probeert bingr.online (time-out 8 s) en toont dan de melding
+  if (Select-String -Path $log -SimpleMatch 'loaded https://bingr.online/web/' -Quiet) { Fail 'webspeler geladen terwijl bingr.online geblokkeerd was' }
+  Shot 'screenshot-offline.png'
+  Set-Content -Path $hosts -Value $hostsBak -NoNewline
+  ipconfig /flushdns | Out-Null
+  Write-Host 'Offline: startpagina bleef staan; bingr.online weer vrijgegeven'
 }
+
+# 3. de webspeler moet laden (bij de offline-test vanzelf: de melding probeert het elke 10 s opnieuw)
+$loaded = Wait-Log 'loaded https://bingr.online/web/' 90
 Start-Sleep -Seconds 6   # webspeler laten opbouwen voor de schermafbeelding
 if ($app.HasExited) { Fail "Bingr stopte (exitcode $($app.ExitCode))" }
-if ($loaded) { Write-Host '::notice title=Rooktest::Bingr draait en de webspeler (https://bingr.online/web/) is geladen' }
+if ($loaded) { Write-Host "::notice title=Rooktest::Bingr draait en de webspeler (https://bingr.online/web/) is geladen$(if ($offlineTested) { ' (na de offline-melding vanzelf opnieuw geprobeerd)' })" }
 else { Write-Host '::warning title=Rooktest::Bingr draait, maar de webspeler van bingr.online is niet (op tijd) geladen' }
+Shot 'screenshot.png'
 
-# 3. schermafbeelding van het hoofdscherm
+# 4. volledig scherm met F11 (pagina -> venster) en een mediatoets (globale sneltoets -> MediaSession)
 try {
-  Add-Type -AssemblyName System.Windows.Forms, System.Drawing
-  $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
-  $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
-  $g = [System.Drawing.Graphics]::FromImage($bmp)
-  $g.CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
-  $bmp.Save((Join-Path $OutDir 'screenshot.png'), [System.Drawing.Imaging.ImageFormat]::Png)
-  $g.Dispose(); $bmp.Dispose()
-} catch { Write-Host "Geen schermafbeelding: $($_.Exception.Message)" }
+  $ws = New-Object -ComObject WScript.Shell
+  [void]$ws.AppActivate($app.Id)
+  Start-Sleep -Seconds 1
+  $ws.SendKeys('{F11}')
+  if (Wait-Log 'fullscreen true' 10) {
+    Start-Sleep -Seconds 2; Shot 'screenshot-fullscreen.png'
+    $ws.SendKeys('{F11}')
+    if (Wait-Log 'fullscreen false' 10) { Write-Host '::notice title=Rooktest::volledig scherm (F11) aan en uit werkt' }
+    else { Write-Host '::warning title=Rooktest::volledig scherm ging niet uit met F11' }
+  } else { Write-Host '::warning title=Rooktest::F11 gaf geen volledig scherm' }
+  Add-Type -Namespace Bingr -Name Key -MemberDefinition '[DllImport("user32.dll")] public static extern void keybd_event(byte vk, byte scan, uint flags, System.UIntPtr extra);'
+  [Bingr.Key]::keybd_event(0xB3, 0, 0, [UIntPtr]::Zero); [Bingr.Key]::keybd_event(0xB3, 0, 2, [UIntPtr]::Zero)
+  if (Wait-Log 'media playpause' 5) { Write-Host '::notice title=Rooktest::mediatoets afspelen/pauze komt bij de speler aan' }
+  else { Write-Host '::warning title=Rooktest::mediatoets afspelen/pauze kwam niet aan' }
+} catch { Write-Host "::warning title=Rooktest::volledig scherm/mediatoets niet te testen: $($_.Exception.Message)" }
+
+# 5. verbinding valt weg terwijl de webspeler open is: herladen (F5) mislukt -> offline-melding, daarna vanzelf terug
+if ($offlineTested -and $loaded) {
+  try {
+    Add-Content -Path $hosts -Value "`r`n0.0.0.0 bingr.online`r`n0.0.0.0 www.bingr.online"
+    ipconfig /flushdns | Out-Null
+    $before = @(Select-String -Path $log -SimpleMatch 'loaded https://bingr.online/web/').Count
+    [void]$ws.AppActivate($app.Id); Start-Sleep -Seconds 1
+    $ws.SendKeys('{F5}')
+    $failed = Wait-Log 'navigation-failed' 20
+    $back = $failed -and (Wait-Log 'loaded http://tauri.localhost/index.html' 10)
+    Set-Content -Path $hosts -Value $hostsBak -NoNewline
+    ipconfig /flushdns | Out-Null
+    if ($back) {
+      $again = $false
+      for ($i = 0; $i -lt 90 -and -not $again; $i++) { Start-Sleep -Seconds 1; $again = @(Select-String -Path $log -SimpleMatch 'loaded https://bingr.online/web/').Count -gt $before }
+      if ($again) { Write-Host '::notice title=Rooktest::verbinding weg tijdens gebruik: offline-melding, daarna vanzelf terug naar de webspeler' }
+      else { Write-Host '::warning title=Rooktest::na de offline-melding niet vanzelf terug naar de webspeler' }
+    } else { Write-Host "::warning title=Rooktest::herladen zonder verbinding gaf geen offline-melding (navigation-failed: $failed)" }
+  } catch { Write-Host "::warning title=Rooktest::offline tijdens gebruik niet te testen: $($_.Exception.Message)" }
+  finally { Set-Content -Path $hosts -Value $hostsBak -NoNewline }
+}
 
 # tweede start: mag geen tweede proces blijven (single instance), het bestaande venster komt naar voren
 $second = Start-Process -FilePath $exe.FullName -PassThru

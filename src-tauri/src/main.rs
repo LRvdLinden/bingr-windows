@@ -50,6 +50,7 @@ fn debug_log(line: &str) {
 }
 
 fn media_key(app: &AppHandle, action: &str) {
+    debug_log(&format!("media {action}"));
     if let Some(w) = app.get_webview_window(MAIN) {
         let _ = w.eval(format!("window.__bingrMediaKey && window.__bingrMediaKey('{action}')"));
     }
@@ -87,6 +88,7 @@ fn hook_webview2(win: &WebviewWindow) {
                     let mut fs = BOOL::default();
                     s.ContainsFullScreenElement(&mut fs)?;
                     let on = fs.as_bool();
+                    debug_log(&format!("fullscreen {on}"));
                     let wf = wf.clone();
                     // niet binnen de WebView2-callback zelf: via de event loop
                     std::thread::spawn(move || {
