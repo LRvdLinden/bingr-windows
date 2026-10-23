@@ -187,7 +187,6 @@ jobs:
         shell: bash
         env:
           TOKEN: ${{ secrets.BINGR_INBOX_TOKEN }}
-          BINGR_SIGN_KEY: ${{ secrets.BINGR_BUILD_SIGN_KEY }}   # security M4: handtekening (zie README van bingr-beheer)
           BINGR_INBOX_REPO: LRvdLinden/bingr-inbox
         run: |
           set -euo pipefail
