@@ -4,6 +4,20 @@ Alle versies van Bingr voor Windows (installer voor Windows 10 en 11). De app to
 
 Per build, ingedeeld per apparaatsoort: **Nieuw**, **Verbeterd** en **Opgelost**.
 
+## Versie 1.0.1 · Build 150
+_25 oktober 2026_
+
+### Alle apps en de website
+
+**Verbeterd**
+
+- Categorieën met dezelfde naam worden één categorie, zonder dubbele titels en met de talen als label; aan- en uitzetten geldt voor alle bronnen tegelijk
+
+**Opgelost**
+
+- Taal-, land- en kwaliteitsaanduidingen zoals "| NL |", "MULTI / LINGO", "[EN]" of "4K" verdwijnen overal uit de namen van categorieën, en namen in hoofdletters krijgen nette hoofdletters
+- Ontdek categorieën toont Netflix niet meer twee keer en toont de logo's van streamingdiensten weer
+
 ## Versie 1.0.1 · Build 149
 _25 oktober 2026_
 
