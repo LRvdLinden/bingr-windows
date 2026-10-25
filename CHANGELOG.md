@@ -4,6 +4,25 @@ Alle versies van Bingr voor Windows (installer voor Windows 10 en 11). De app to
 
 Per build, ingedeeld per apparaatsoort: **Nieuw**, **Verbeterd** en **Opgelost**.
 
+## Versie 1.0.1 · Build 151
+_25 oktober 2026_
+
+### Alle apps en de website
+
+**Nieuw**
+
+- Nieuwe rij Zenders op Home met de logo's van je eigen zenders: je recente zenders en favorieten eerst, met het programma van nu eronder; klikken start de zender meteen
+
+**Verbeterd**
+
+- Een titel of zender die op meerdere servers staat, staat maar één keer in de rijen op Home, uit de bron in je taal; de andere servers kies je op de detailpagina
+
+### Windows en Website
+
+**Verbeterd**
+
+- Synchroniseren van Mijn lijst, voortgang en geschiedenis gebeurt op de achtergrond, zonder haperingen, ook bij een groot profiel
+
 ## Versie 1.0.1 · Build 150
 _25 oktober 2026_
 
