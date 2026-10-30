@@ -1,6 +1,6 @@
 # Changelog · Windows
 
-Alle versies van Bingr voor Windows (installer voor Windows 10 en 11). De app toont de webspeler van bingr.online: verbeteringen daaraan staan bij de website op [bingr.online/changelog](https://bingr.online/changelog/). iPhone, iPad, Apple TV en Mac: [iptv-ios-appletv](https://github.com/LRvdLinden/iptv-ios-appletv/blob/main/CHANGELOG.md) · Android en Samsung TV: [bingr-android](https://github.com/LRvdLinden/bingr-android/blob/main/CHANGELOG.md).
+Alle versies van Bingr voor Windows (installer voor Windows 10 en 11). De app toont de webspeler van bingr.online: verbeteringen daaraan staan bij de website op [bingr.online/changelog](https://bingr.online/changelog/). iPhone, iPad, Apple TV en Mac: [iptv-ios-appletv](https://github.com/LRvdLinden/iptv-ios-appletv/blob/main/CHANGELOG.md) · Android en Android TV: [bingr-android](https://github.com/LRvdLinden/bingr-android/blob/main/CHANGELOG.md).
 
 Per build, ingedeeld per apparaatsoort: **Nieuw**, **Verbeterd** en **Opgelost**.
 
@@ -49,6 +49,7 @@ _25 oktober 2026_
 **Verbeterd**
 
 - Zoeken vindt meer: losse woorden in elke volgorde, zonder accenten en voorvoegsels en met een kleine typefout
+- Zoeken doorzoekt ook de catalogi van Stremio-add-ons
 
 **Opgelost**
 
@@ -60,13 +61,7 @@ _25 oktober 2026_
 
 - Zoeken toont ook treffers uit verborgen categorieën, onderaan
 
-### iOS, iPadOS, tvOS, macOS, Android, Android TV, Windows en Website
-
-**Verbeterd**
-
-- Zoeken doorzoekt ook de catalogi van Stremio-add-ons
-
-### Android, Android TV, Samsung TV (Tizen), Windows, LG TV (webOS) en Website
+### Android, Android TV, Windows en Website
 
 **Verbeterd**
 
@@ -97,28 +92,19 @@ _24 oktober 2026_
 **Verbeterd**
 
 - De startdiagnose toont bovenaan of de start goed, traag of vastgelopen was, met app-tijd los van wachten op jou en de vorige start
+- Bij vastlopen legt de diagnose vast welke taak het was en of de app op de voorgrond stond
+- De diagnose toont per server of zenders, films en series geleverd zijn, leeg waren, mislukten of allemaal verborgen zijn, plus de soort verbinding en de opslag als één totaal
 - Een diagnose naar support bevat altijd de startdiagnose van deze en de vorige start
+
+**Opgelost**
+
+- Na het starten loopt Bingr niet meer vast bij een grote bibliotheek: zwaar werk zoals sorteren, filteren, Mijn lijst, de tv-gids, opslaan en pincodes gebeurt op de achtergrond of in kleine stukjes
 
 ### iOS, iPadOS, tvOS, macOS, Windows en Website
 
 **Opgelost**
 
 - Series en films van grote of trage Xtream-servers worden los van elkaar opgehaald, met meer tijd en een nieuwe poging; een trage serieslijst houdt films en zenders niet meer op
-
-### iOS, iPadOS, tvOS, macOS, Android, Android TV, Samsung TV (Tizen), Windows en Website
-
-**Nieuw**
-
-- Een LG-tv staat in je apparatenlijst en bij Wie kijkt er nu als LG TV
-
-**Verbeterd**
-
-- Bij vastlopen legt de diagnose vast welke taak het was en of de app op de voorgrond stond
-- De diagnose toont per server of zenders, films en series geleverd zijn, leeg waren, mislukten of allemaal verborgen zijn, plus de soort verbinding en de opslag als één totaal
-
-**Opgelost**
-
-- Na het starten loopt Bingr niet meer vast bij een grote bibliotheek: zwaar werk zoals sorteren, filteren, Mijn lijst, de tv-gids, opslaan en pincodes gebeurt op de achtergrond of in kleine stukjes
 
 ### Website en Server
 
@@ -127,10 +113,6 @@ _24 oktober 2026_
 - Statuspagina: een mislukte build geeft niet meer meteen een grote storing; alleen de echte build telt, en pas na twee mislukte builds op rij (of na 2 uur) is het een storing
 
 ### Server
-
-**Nieuw**
-
-- De server kent de LG TV-app (webOS)
 
 **Verbeterd**
 
