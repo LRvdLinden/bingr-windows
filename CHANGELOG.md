@@ -4,6 +4,15 @@ Alle versies van Bingr voor Windows (installer voor Windows 10 en 11). De app to
 
 Per build, ingedeeld per apparaatsoort: **Nieuw**, **Verbeterd** en **Opgelost**.
 
+## Versie 1.0.3 · Build 158
+_31 oktober 2026_
+
+### Windows en Website
+
+**Opgelost**
+
+- Profielen met veel bekeken titels vullen de opslag van de browser niet meer, zodat je ingelogd blijft en je apparaat niet opnieuw meetelt
+
 ## Versie 1.0.3 · Build 157
 _30 oktober 2026_
 
